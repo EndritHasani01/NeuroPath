@@ -50,11 +50,18 @@ public class SecurityConfig {
 
     private CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
-        // ① allow the Vite dev server ↴
-        cfg.setAllowedOriginPatterns(List.of(
-                System.getenv("frontend.origin")
-        ));
-        cfg.setAllowedOrigins(List.of("http://localhost:*")); // dev
+
+        // Render-injected origin (may be null on first boot)
+        String prodOrigin = System.getenv("FRONTEND_ORIGIN");   // ← use ALL CAPS, more conventional
+
+        // build the list safely
+        if (prodOrigin != null && !prodOrigin.isBlank()) {
+            cfg.setAllowedOriginPatterns(List.of(prodOrigin));
+        } else {
+            // allow nothing (or "*" during hard-dev) if var is absent
+            cfg.setAllowedOriginPatterns(List.of("http://localhost:*"));
+        }
+
         cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
         cfg.setAllowCredentials(true);
