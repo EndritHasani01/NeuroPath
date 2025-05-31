@@ -7,7 +7,7 @@ import {
     Typography,
     Link,
 } from "@mui/material";
-import { registerUser } from "../services/auth";
+import {loginUser, registerUser} from "../services/auth";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -32,9 +32,7 @@ export default function RegisterPage() {
         }
         try {
             await registerUser(form);
-            const { data } = await import("../services/auth").then((m) =>
-                m.loginUser({ username: form.username, password: form.password })
-            );
+            const { data } = await loginUser(form);
             login(data.token);
             navigate("/");
         } catch (err) {
