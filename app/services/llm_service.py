@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
+from pydantic_ai.models.fallback import FallbackModel
 from pydantic_ai.settings import ModelSettings
 
 from app.models import (
@@ -16,18 +17,29 @@ from app.models import (
 )
 
 # ---------------------------------------------------------------------------
-GROQ_MODEL_Deepseek_r1 = "groq:deepseek-r1-distill-llama-70b"
-GROQ_MODEL_llama_3_3_70b = "groq:llama3-70b-8192"
-GROQ_MODEL_llama_3_8b = "groq:llama3-8b-8192"
-GROQ_MODEL_gemma_2_9b = "groq:gemma2-9b-it"
-GROQ_MODEL = "groq:meta-llama/llama-4-maverick-17b-128e-instruct"
-GEMINI_MODEL_1 = "google-gla:gemini-2.0-flash"
-GEMINI_MODEL_2 = "google-gla:gemini-2.5-flash-preview-05-20"
-GEMINI_MODEL_3 = "google-gla:gemini-2.0-flash"
+
+
+FALLBACK_SEQUENCE_1 = FallbackModel(
+    "google-gla:gemini-2.5-flash-preview-05-20",
+    "google-gla:gemini-2.0-flash",
+    "groq:deepseek-r1-distill-llama-70b",
+    "google-gla:gemini-2.0-flash-lite",
+    "groq:meta-llama/llama-4-maverick-17b-128e-instruct",
+    "groq:llama3-70b-8192",
+)
+
+FALLBACK_SEQUENCE_2 = FallbackModel(
+"google-gla:gemini-2.0-flash",
+"google-gla:gemini-2.0-flash-lite",
+    "groq:deepseek-r1-distill-llama-70b",
+    "groq:meta-llama/llama-4-maverick-17b-128e-instruct",
+    "groq:llama3-70b-8192",
+    "google-gla:gemini-2.5-flash-preview-05-20",
+)
 # print("Using model:", GROQ_MODEL_Deepseek_r1)
 _default_groq_settings: ModelSettings = {
-    "temperature": 0.7,
-    "top_p": 0.9,
+    "temperature": 0.8,
+    "top_p": 0.95,
 }
 
 
@@ -52,14 +64,10 @@ class ReviewPrompt(BaseModel):
 
 
 
-# ---------- Internal Pydantic models for agent payloads (if different from API DTOs) ----------------
-# These are now defined in models.py and imported
-
-# ---------- New Agents ---------------------------------------------------------
 _user_data_analyzer_agent = Agent(
-    model=GEMINI_MODEL_1,
+    model=FALLBACK_SEQUENCE_2,
     output_type=UserProficiencyProfile,
-    retries=2,
+    retries=6,
     system_prompt=(
         "You are an expert learning analyst AI. Your task is to analyze the provided user performance data "
         "(TopicPerformanceData) and generate a UserProficiencyProfile.\n"
@@ -75,9 +83,9 @@ _user_data_analyzer_agent = Agent(
 )
 
 _content_adaptation_planner_agent = Agent(
-    model=GEMINI_MODEL_2,
+    model=FALLBACK_SEQUENCE_1,
     output_type=ContentAdaptationPlan,
-    retries=2,
+    retries=6,
     system_prompt=(
         "You are an adaptive learning strategist AI. Based on the UserProficiencyProfile, current topic, and level, "
         "create a ContentAdaptationPlan for the next set of insights.\n"
@@ -93,11 +101,10 @@ _content_adaptation_planner_agent = Agent(
     model_settings=_default_groq_settings,
 )
 
-# ---------- Existing Agents (potentially modified prompts) -------------------------------------
 _learning_path_agent = Agent(
-    model=GEMINI_MODEL_2,  # Ensure this model is suitable
+    model=FALLBACK_SEQUENCE_1,  # Ensure this model is suitable
     output_type=LearningPathResponse,
-    retries=2,
+    retries=6,
     system_prompt=(  # Modified prompt
         "You are a curriculum designer AI.\n"
         "Use the supplied JSON payload (containing 'domain_name' and optionally 'user_proficiency_profile' from an initial assessment) "
@@ -112,9 +119,9 @@ _learning_path_agent = Agent(
 )
 
 _insights_agent = Agent(
-    model=GEMINI_MODEL_2,
+    model=FALLBACK_SEQUENCE_2,
     output_type=List[InsightDetail],
-    retries=2,
+    retries=6,
     system_prompt=(  # Modified prompt
         "You are an instructional designer AI creating adaptive micro-learning insights.\n"
         "Given the payload (containing 'domain_name', 'topic_name', 'level', and a 'content_adaptation_plan'), "
@@ -127,10 +134,10 @@ _insights_agent = Agent(
     model_settings=_default_groq_settings,
 )
 
-_question_agent = Agent(  # Existing, likely unchanged
-    model=GEMINI_MODEL_1,
+_question_agent = Agent(
+    model=FALLBACK_SEQUENCE_2,
     output_type=List[QuestionDetail],
-    retries=3,
+    retries=6,
     system_prompt=(
         "You are a question-writing AI.\n"
         "Given the insight title & explanation, return a list of around "
@@ -141,10 +148,10 @@ _question_agent = Agent(  # Existing, likely unchanged
     model_settings=_default_groq_settings,
 )
 
-_review_agent = Agent(  # Existing, prompt could be enhanced to use structured performance data
-    model=GEMINI_MODEL_1,
+_review_agent = Agent(
+    model=FALLBACK_SEQUENCE_2,
     output_type=ReviewResponse,
-    retries=3,
+    retries=6,
     system_prompt=(
         "You are a tutoring AI preparing a spaced repetition review.\n"
         "Given the payload (topic_name, level, and performance_data which includes accuracy, common errors, etc.) "
@@ -157,7 +164,6 @@ _review_agent = Agent(  # Existing, prompt could be enhanced to use structured p
 )
 
 
-# ---------- Public API helpers - Modified --------------------------------------------
 async def generate_learning_path_logic(
         domain_name: str,
         user_id: Optional[int] = None,
@@ -217,7 +223,6 @@ async def generate_insights_logic(
 
     if user_topic_performance_data and (
             user_topic_performance_data.insights_performance or user_topic_performance_data.assessment_answers):
-        # 1. Analyze UserData
         try:
             analyzer_payload = user_topic_performance_data.model_copy(
                 update={
@@ -261,7 +266,6 @@ async def generate_insights_logic(
         adaptation_plan_dict = fallback_plan.model_dump(exclude_none=True)
         print(f"Using Fallback Content Adaptation Plan: {json.dumps(adaptation_plan_dict)}")
 
-    # 3. Generate Insights using the plan
     insights_payload = {
         "domain_name": domain_name,
         "topic_name": adaptation_plan_dict.get("next_topic_name", topic_name),  # Use plan's target topic/level
@@ -293,9 +297,8 @@ async def generate_review_logic(
         level: int,
         performance_data: Dict[str, Any],  # Java will construct this from its TopicPerformanceDataDTO
 ) -> ReviewResponse:
-    # The 'performance_data' dict should be structured to be useful for the _review_agent's prompt
-    # E.g., it could include accuracy, list of correctly/incorrectly answered concepts.
-    payload = {  # Directly creating dict to match ReviewPrompt implicit structure
+
+    payload = {
         "topic_name": topic_name,
         "level": level,
         "performance_data": performance_data,
