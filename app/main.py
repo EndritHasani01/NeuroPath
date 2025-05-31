@@ -1,20 +1,17 @@
-from typing import List, Dict, Any # Ensure Dict, Any are imported
+from typing import List
 
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses    import JSONResponse
 from app.core.config import settings
-from app.models import ( # Import new and existing models from app.models
+from app.models import (
     LearningPathResponse,
-    # InsightsGroup, # Not directly returned by /generate-insights anymore
-    NextInsightRequest,
-    NextInsightResponse,
     ReviewGenerationRequest,
     ReviewResponse, InsightDetail,
-    LearningPathRequest, # New request DTO
-    InsightsRequest      # New request DTO
+    LearningPathRequest,
+    InsightsRequest
 )
-from app.services import indexing_service, llm_service
+from app.services import llm_service
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -77,27 +74,6 @@ async def generate_insights(request: InsightsRequest = Body(..., embed=False)) -
             status_code=500, detail=f"Failed to generate insights: {str(exc)}"
         ) from exc
 
-# Endpoints for get_next_insight and generate_review remain structurally the same
-@app.post(
-    "/api/ai/get-next-insight",
-    response_model=NextInsightResponse,
-    tags=["Insights"],
-    summary="Pick next insight",
-)
-async def get_next_insight(request: NextInsightRequest) -> NextInsightResponse:
-    if not request.uncompleted_insights:
-        raise HTTPException(status_code=400, detail="No uncompleted insights provided.")
-    try:
-        return indexing_service.choose_next_insight_logic( # Assuming indexing_service is simpler and not LLM-based for now
-            uncompleted_insights=request.uncompleted_insights,
-            user_id=request.user_id,
-        )
-    except ValueError as val_err:
-        raise HTTPException(status_code=400, detail=str(val_err)) from val_err
-    except Exception as exc:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to choose next insight: {str(exc)}"
-        ) from exc
 
 @app.post(
     "/api/ai/generate-review",
@@ -118,3 +94,7 @@ async def generate_review(request: ReviewGenerationRequest) -> ReviewResponse:
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to generate review: {str(exc)}") from exc
+
+
+#venv\Scripts\activate
+#uvicorn app.main:app --reload --port 8000

@@ -1,15 +1,5 @@
 fastapi==0.115.12
 uvicorn[standard]==0.34.2
 pydantic==2.11.4
-requests==2.32.3 # Though Java calls Python, Python might call other services in future
 python-dotenv==1.1.0
-pyautogen==0.9 # Or latest compatible version
-groq==0.24.0 # Or latest
-llama-index-core==0.12.35
-#llama-index-readers-memory==0.1.1 # For in-memory data handling with LlamaIndex
-llama-index-llms-groq==0.3.1
-#llama-index-embeddings-huggingface==0.5.4 # For local embeddings if needed, or use an API
-
-# Optional: for more advanced LlamaIndex features or specific LLMs/embeddings
-# llama-index-embeddings-openai
-# llama-index-llms-openai
+pydantic-ai==0.2.12

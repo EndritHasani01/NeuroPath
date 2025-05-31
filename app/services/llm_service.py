@@ -1,22 +1,15 @@
-# ===============================
-# llm_service.py
-# ===============================
 from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any, Dict, List, Optional, Literal
+from typing import Any, Dict, List, Optional
 
-from aiohttp import payload
-from fastapi import requests
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 from pydantic_ai.settings import ModelSettings
 
-from app.core.config import settings
 from app.models import (
     AssessmentAnswer,
-    InsightsGroup,
     LearningPathResponse,
     ReviewResponse, InsightDetail, QuestionDetail, UserProficiencyProfile, ContentAdaptationPlan, TopicPerformanceData,
     ContentAdaptationFocus,
@@ -31,9 +24,9 @@ GROQ_MODEL = "groq:meta-llama/llama-4-maverick-17b-128e-instruct"
 GEMINI_MODEL_1 = "google-gla:gemini-2.0-flash"
 GEMINI_MODEL_2 = "google-gla:gemini-2.5-flash-preview-05-20"
 GEMINI_MODEL_3 = "google-gla:gemini-2.0-flash"
-print("Using model:", GROQ_MODEL_Deepseek_r1)
+# print("Using model:", GROQ_MODEL_Deepseek_r1)
 _default_groq_settings: ModelSettings = {
-    "temperature": 0.3,
+    "temperature": 0.7,
     "top_p": 0.9,
 }
 
@@ -145,7 +138,7 @@ _question_agent = Agent(  # Existing, likely unchanged
         f"{QuestionDetail.model_json_schema()}\n"
         "Return only valid JSON for the response model."
     ),
-    model_settings={"temperature": 0.4, "top_p": 0.85},
+    model_settings=_default_groq_settings,
 )
 
 _review_agent = Agent(  # Existing, prompt could be enhanced to use structured performance data

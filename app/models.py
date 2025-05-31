@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Dict, Any, Optional, Union # Added Union
+from typing import List, Dict, Any, Optional
 
 from pydantic import BaseModel, Field, conint, constr
 from pydantic.alias_generators import to_camel
