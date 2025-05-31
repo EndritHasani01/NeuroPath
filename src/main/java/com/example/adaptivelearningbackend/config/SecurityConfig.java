@@ -52,11 +52,9 @@ public class SecurityConfig {
         CorsConfiguration cfg = new CorsConfiguration();
         // ① allow the Vite dev server ↴
         cfg.setAllowedOriginPatterns(List.of(
-                "http://localhost:5173",         // Vite (default)
-                "http://127.0.0.1:5173",         // alternative loopback
-                "http://localhost:3000"          // keep React-CLI if I ever use it
+                System.getenv("frontend.origin")
         ));
-        cfg.setAllowedOrigins(List.of("http://localhost:3000"));
+        cfg.setAllowedOrigins(List.of("http://localhost:*")); // dev
         cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
         cfg.setAllowCredentials(true);
