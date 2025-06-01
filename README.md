@@ -1,12 +1,61 @@
-# React + Vite
+# InsightPath AI – Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the frontend for **InsightPath AI**, a learning platform that delivers personalized AI-generated insights and questions. Built with **React 18**, **Vite**, and **Material-UI v5**, it interfaces with a Spring Boot backend and a FastAPI microservice.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+* User authentication via JWT (login/register)
+* Domain and topic selection
+* AI-generated insights, questions, and review summaries
+* Responsive UI using Material-UI components
+* Protected routes and context-based state management
 
-## Expanding the ESLint configuration
+## Project Structure
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```
+src/
+├─ pages/             # Screens (login, dashboard, etc.)
+├─ components/        # Reusable UI (InsightView, QuestionSection, etc.)
+├─ contexts/          # Auth and learning state providers
+├─ services/          # API client and auth helpers
+└─ theme.js           # MUI custom theme
+```
+
+## Tech Stack
+
+* **React 18**, **Vite**
+* **Material-UI v5**
+* **React Router v6**
+* **Axios** with JWT interceptors
+* **Context API + Reducer** for state
+
+## Setup
+
+```bash
+# Install dependencies
+npm install
+
+# Start dev server
+VITE_API_BASE_URL=http://localhost:8080 npm run dev
+```
+
+## Authentication
+
+* Tokens stored in `localStorage`
+* Axios auto-injects `Authorization` header
+* Unauthenticated users redirected to `/login`
+
+## Deployment
+
+Builds to static files served via Nginx or Caddy:
+
+```bash
+npm run build
+```
+
+## Key Files
+
+* `src/contexts/LearningContext.jsx`: global state machine
+* `src/components/InsightView.jsx`: renders insight and questions
+* `src/services/api.js`: Axios setup and interceptors
+
