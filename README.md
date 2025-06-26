@@ -1,79 +1,110 @@
 # InsightPath AI – Java Backend
 
-This is the main backend for **InsightPath AI**, a Spring Boot 3.4.5 service that handles authentication, business logic, and communication with a FastAPI AI microservice. It uses JWT for security, JPA for persistence, and exposes a RESTful API consumed by a React frontend.
+This repository contains the Spring Boot service that powers the InsightPath AI learning platform. The application manages authentication, persists user progress and delegates adaptive content generation to a Python microservice. It exposes a REST API that is consumed by the front-end.
 
-## Features
+## Technology
 
-* JWT-based authentication and role-based access
-* Structured learning workflow via REST endpoints
-* Dynamic AI integration for personalized insights and reviews
-* JPA/Hibernate-backed domain model with PostgreSQL
-* Async WebClient integration with Python microservice
+* **Java 21**, **Spring Boot 3.4.5**
+* Spring Data JPA with **PostgreSQL**
+* **Spring Security** with JWT authentication
+* Reactive **WebClient** for Python service integration
+* **Lombok** and **ModelMapper** for boilerplate reduction
+* Built with **Maven** (wrapper included)
 
-## Tech Stack
+## Configuration
 
-* **Spring Boot 3.4.5**
-* **Spring Security + JWT**
-* **Spring Data JPA**
-* **PostgreSQL**
-* **Lombok**
-* **WebClient (reactive)**
-* **Maven**
+Two property files exist:
 
-## Project Structure
+* `src/main/resources/application.properties` – default development settings (localhost database, Python service at `http://localhost:8000/api/ai`).
+* `src/main/resources/application-prod.properties` – values are taken from environment variables for production deployments.
 
-```
-src/main/java/
-├─ config/           # Security config, JWT filter/provider
-├─ controller/       # REST API controllers
-├─ service/          # Business logic + AI integration
-├─ model/            # JPA entities and DTOs
-└─ repository/       # Spring Data repositories
-```
+Important variables for production:
 
-## Key Endpoints
+* `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`
+* `PYTHON_SERVICE_BASEURL`
+* `FRONTEND_ORIGIN` – allowed CORS origin
+* `JWT_SECRET` and optional `JWT_EXPIRATION_MS`
 
-| Endpoint                                      | Description                          |
-| --------------------------------------------- | ------------------------------------ |
-| `POST /api/auth/login`                        | Authenticate user, return JWT        |
-| `POST /api/auth/register`                     | Register new user                    |
-| `GET /api/learning/domains`                   | List available learning domains      |
-| `POST /api/learning/domains/start`            | Submit assessment, get learning path |
-| `GET /api/learning/domains/{id}/next-insight` | Get next insight                     |
-| `POST /api/learning/insights/answer`          | Submit answer and update progress    |
-| `GET /api/learning/domains/{id}/review`       | Generate review summary              |
+## Data Initialisation
 
-## AI Integration
+`DataInitializer` seeds the database on startup with:
 
-* Communicates with a FastAPI microservice via **WebClient**
-* Endpoints:
-
-  * `/generate-learning-path`
-  * `/generate-insights`
-  * `/generate-review`
-* Uses `.block()` (can be optimized)
-
-## Security
-
-* **JWT** with HMAC-SHA and roles claim
-* Stateless session, open CORS (configurable)
-* Secure paths: all except `/api/auth/**` and static assets
+* Two roles (`ROLE_USER`, `ROLE_ADMIN`) and a default `admin` user.
+* A catalogue of learning domains grouped by category, each with example assessment questions.
 
 ## Running Locally
 
 ```bash
-# Required env variables
-export SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/insightpath
-export JWT_SECRET=your_jwt_secret
-export PYTHON_SERVICE_BASE_URL=http://localhost:8000
+# Example environment (override as needed)
+export SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/adaptive_learning_db
+export SPRING_DATASOURCE_USERNAME=postgres
+export SPRING_DATASOURCE_PASSWORD=postgres
+export PYTHON_SERVICE_BASEURL=http://localhost:8000/api/ai
+export FRONTEND_ORIGIN=http://localhost:3000
+export JWT_SECRET=devsecret
 
-# Build and run
 ./mvnw spring-boot:run
 ```
 
-## Key Files
+Swagger documentation is available at `http://localhost:8080/swagger-ui.html` once the application is running.
 
-* `SecurityConfig.java` – Spring Security setup
-* `LearningServiceImpl.java` – core learning workflow logic
-* `AiIntegrationServiceImpl.java` – LLM adapter (WebClient)
+## REST API
 
+### Authentication
+
+* `POST /api/auth/login` – obtain a JWT token
+* `POST /api/auth/register` – simple registration (username == email)
+
+### User
+
+* `POST /api/users/register` – create a user
+* `GET  /api/users/me` – profile summary of the authenticated user
+
+### Learning Workflow
+
+* `GET  /api/learning/domains` – list all domains
+* `GET  /api/learning/domains/{id}/assessment-questions` – questions for the initial assessment
+* `POST /api/learning/domains/start` – submit assessment answers and receive a learning path
+* `GET  /api/learning/domains/{id}/next-insight` – fetch the next insight for the current topic
+* `POST /api/learning/insights/submit-answer` – submit an answer to a question
+* `GET  /api/learning/domains/{id}/progress` – current progress within a domain
+* `GET  /api/learning/domains/{id}/review` – generate a review after completing a level
+* `POST /api/learning/domains/{id}/complete-review?satisfactoryPerformance=bool` – mark review complete and potentially advance
+* `GET  /api/learning/domains/{id}/overview` – high level view of all topics in the learning path
+* `POST /api/learning/domains/{id}/select-topic/{topicIdx}` – manually change current topic index
+* `GET  /api/learning/domains/status` – list all domains with started/completed status
+
+## Python Integration
+
+`AiIntegrationService` communicates with the external Python service using WebClient. It calls:
+
+* `/generate-learning-path`
+* `/generate-insights`
+* `/generate-review`
+
+The responses are synchronously retrieved using `block()` and converted into DTOs used by the business layer.
+
+## Building a Container
+
+A multi-stage `Dockerfile` is included. Build and run with:
+
+```bash
+docker build -t insightpath-backend .
+docker run -p 8080:8080 --env-file env.list insightpath-backend
+```
+
+where `env.list` contains the required environment variables described above.
+
+## Repository Structure
+
+```
+src/main/java/com/example/adaptivelearningbackend
+├─ config/         # Security configuration and startup seeding
+├─ controller/     # REST controllers
+├─ dto/            # Request and response models
+├─ entity/         # JPA entities
+├─ repository/     # Spring Data repositories
+├─ security/       # JWT utilities and filter
+├─ service/        # Business logic and AI integration
+└─ enums/          # Enumerations used in entities/DTOs
+```
