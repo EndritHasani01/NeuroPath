@@ -1,6 +1,8 @@
-# InsightPath AI – Python AI Microservice
+# InsightPath AI – Python Microservice
 
-This is the AI microservice powering **InsightPath AI**, built with **FastAPI** and driven entirely by **pydantic-ai agents**. It handles adaptive learning logic such as curriculum generation, personalized insights, and spaced-repetition reviews.
+This repository contains the Python service that generates adaptive learning material for **InsightPath AI**. It exposes a small FastAPI application which orchestrates a set of `pydantic-ai` agents to build learning paths, insights and review summaries.
+
+The code base is intentionally compact and the entire business logic lives in the `llm_service.py` module. All request and response models are defined in `models.py` and use camelCase JSON so they can be consumed by the Java/React clients without extra mapping code.
 
 ## Features
 
@@ -10,13 +12,6 @@ This is the AI microservice powering **InsightPath AI**, built with **FastAPI** 
 * Compatible JSON models for seamless Java/React integration (camelCase)
 * Fully async FastAPI with rich validation
 
-## Tech Stack
-
-* **FastAPI**
-* **pydantic-ai**
-* **Pydantic v2**
-* **Uvicorn**
-* Optional integration with: OpenAI, Groq, Google Gemini, Llama3/4
 
 ## Key Endpoints
 
@@ -51,6 +46,8 @@ All logic is powered by declarative `Agent` instances:
 
 Agents use **fallback chains** across providers like Gemini, Groq, and Llama3 to ensure high availability.
 
+Functions like **generate_learning_path_logic** and **generate_insights_logic** orchestrate these agents to produce adaptive content.
+
 ## Adaptation Workflow
 
 1. **Learning Path**:
@@ -76,9 +73,8 @@ uvicorn app.main:app --reload --port 8000
 Set required env variables:
 
 ```bash
-export OPENAI_API_KEY=...
+export GEMINI_API_KEY=...
 export GROQ_API_KEY=...
-export LLAMA_INDEX_DIR=...
 ```
 
 ## Response Models
