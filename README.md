@@ -1,7 +1,14 @@
-# InsightPath AI – Frontend
+# InsightPath AI Frontend
 
-This is the frontend for **InsightPath AI**, a learning platform that delivers personalized AI-generated insights and questions. Built with **React 18**, **Vite**, and **Material-UI v5**, it interfaces with a Spring Boot backend and a FastAPI microservice.
+This project contains the React application used by **InsightPath AI**. It communicates with a separate REST API to provide personalized learning paths, insights, and review questions.
 
+## Stack
+
+* **React 19** with [Vite](https://vitejs.dev/) for development and bundling
+* **Material-UI 7** for UI components and styling
+* **React Router 7** for routing
+* **Axios** with interceptors for API access
+  
 ## Features
 
 * User authentication via JWT (login/register)
@@ -10,52 +17,86 @@ This is the frontend for **InsightPath AI**, a learning platform that delivers p
 * Responsive UI using Material-UI components
 * Protected routes and context-based state management
 
-## Project Structure
+## Project layout
 
 ```
 src/
-├─ pages/             # Screens (login, dashboard, etc.)
-├─ components/        # Reusable UI (InsightView, QuestionSection, etc.)
-├─ contexts/          # Auth and learning state providers
-├─ services/          # API client and auth helpers
-└─ theme.js           # MUI custom theme
+├─ components/        # Reusable UI elements and layout pieces
+│  ├─ common/         # Helpers such as PrivateRoute
+│  └─ layout/         # Shared layout like the Header
+├─ pages/             # Route screens (login, domain overview, learning, etc.)
+├─ contexts/          # Global state providers
+├─ services/          # Axios client and auth helpers
+├─ assets/            # Static assets
+├─ theme.js           # Custom Material-UI theme
+└─ main.jsx           # Application bootstrap
 ```
 
-## Tech Stack
+## Development
 
-* **React 18**, **Vite**
-* **Material-UI v5**
-* **React Router v6**
-* **Axios** with JWT interceptors
-* **Context API + Reducer** for state
+1. Install dependencies:
 
-## Setup
+   ```bash
+   npm install
+   ```
+2. Start the development server (ensure `VITE_API_BASE_URL` points to the backend API):
 
-```bash
-# Install dependencies
-npm install
+   ```bash
+   VITE_API_BASE_URL=http://localhost:8080 npm run dev
+   ```
+3. Run the linter:
 
-# Start dev server
-VITE_API_BASE_URL=http://localhost:8080 npm run dev
+   ```bash
+   npm run lint
+   ```
+4. Build optimized assets:
+
+   ```bash
+   npm run build
+   ```
+
+   Output will be in the `dist/` directory.
+
+## Routing
+
+Routes are defined in `src/App.jsx`. Public pages are `"/login"` and `"/register"`; all others use `PrivateRoute` to require a valid token.
+
+```
+/                 → DomainSelectorPage
+/assessment       → AssessmentPage
+/domain/:id       → DomainHomePage
+/learn            → LearningDashboardPage
+/review           → ReviewView
 ```
 
-## Authentication
+`PrivateRoute` (in `src/components/common/PrivateRoute.jsx`) checks the token from `AuthContext` and redirects unauthenticated users to `/login`.
 
-* Tokens stored in `localStorage`
-* Axios auto-injects `Authorization` header
-* Unauthenticated users redirected to `/login`
+## State management
 
-## Deployment
+`LearningContext` (in `src/contexts/LearningContext.jsx`) holds the application state such as available domains, assessment answers, current insight, and review data. It exposes helper functions to fetch domains, submit answers, and advance the learning flow.
 
-Builds to static files served via Nginx or Caddy:
+## API client
 
-```bash
-npm run build
-```
+All network requests go through `src/services/api.js`. The Axios instance automatically attaches the `Authorization` header and redirects to the login page on a `401` response. Key endpoints include:
 
-## Key Files
+* `GET /learning/domains/status` – list available domains and progress
+* `GET /learning/domains/{id}/assessment-questions`
+* `POST /learning/domains/start` – begin a domain and get the learning path
+* `GET /learning/domains/{id}/next-insight`
+* `POST /learning/insights/submit-answer`
+* `GET /learning/domains/{id}/progress`
+* `GET /learning/domains/{id}/review`
+* `POST /learning/domains/{id}/complete-review?satisfactoryPerformance=`
+* `GET /learning/domains/{id}/overview`
+* `POST /learning/domains/{id}/select-topic/{topicIdx}`
+* `GET /users/me` – fetch profile information
 
-* `src/contexts/LearningContext.jsx`: global state machine
-* `src/components/InsightView.jsx`: renders insight and questions
-* `src/services/api.js`: Axios setup and interceptors
+Authentication helpers live in `src/services/auth.js` and wrap the `/auth/login` and `/auth/register` endpoints.
 
+## Theming
+
+The Material-UI theme defined in `src/theme.js` customises the colour palette, typography, and component defaults used across the app.
+
+---
+
+After cloning this repository and configuring the backend URL, the app can be started locally. Upon sign-up or login, users pick a domain, take an assessment, and then begin receiving generated insights with question sections. Progress is stored server-side and fetched through the endpoints above, allowing the UI to adapt as learners advance.
