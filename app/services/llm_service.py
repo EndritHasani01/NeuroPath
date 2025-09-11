@@ -17,25 +17,46 @@ from app.models import (
 )
 
 # ---------------------------------------------------------------------------
-
-
 FALLBACK_SEQUENCE_1 = FallbackModel(
-    "google-gla:gemini-2.5-flash-preview-05-20",
-    "google-gla:gemini-2.0-flash",
-    "groq:deepseek-r1-distill-llama-70b",
-    "google-gla:gemini-2.0-flash-lite",
-    "groq:meta-llama/llama-4-maverick-17b-128e-instruct",
-    "groq:llama3-70b-8192",
+    "groq:gpt-oss-120b",                         # huge OSS model, 128k
+    "google-gla:gemini-2.5-flash",                 # fast & capable, 1M tokens
+    "groq:deepseek-r1-distill-llama-70b",          # 70B distill, strong reasoning
+    "groq:llama-3.3-70b-versatile",                # production, solid 70B
+    "google-gla:gemini-2.5-flash-lite",            # cheaper large context
+    "groq:kimi-k2-0905",                           # 256k context, newer model
+    "groq:meta-llama/llama-4-maverick-17b-128e-instruct",  # fallback mid-size
+    "google-gla:gemini-2.5-pro", # top reasoning, 1M tokens
 )
 
 FALLBACK_SEQUENCE_2 = FallbackModel(
-"google-gla:gemini-2.0-flash",
-"google-gla:gemini-2.0-flash-lite",
-    "groq:deepseek-r1-distill-llama-70b",
-    "groq:meta-llama/llama-4-maverick-17b-128e-instruct",
-    "groq:llama3-70b-8192",
-    "google-gla:gemini-2.5-flash-preview-05-20",
+    "google-gla:gemini-2.5-flash",                 # balance of speed/quality
+    "groq:gpt-oss-120b",                         # OSS, massive capacity
+    "groq:llama-3.3-70b-versatile",                # reliable production Groq
+    "groq:deepseek-r1-distill-llama-70b",          # reasoning-focused Groq
+    "google-gla:gemini-2.5-flash-lite",            # budget/throughput
+    "groq:kimi-k2-0905",                           # 256k context fallback
+    "groq:meta-llama/llama-4-maverick-17b-128e-instruct",  # mid-size fallback
+    "google-gla:gemini-2.5-pro",                   # higher reasoning
 )
+
+# FALLBACK_SEQUENCE_1 = FallbackModel(
+#     "google-gla:gemini-2.5-flash",
+#     "google-gla:gemini-2.0-flash",
+#     "google-gla:gemini-2.5-pro",
+#     "groq:deepseek-r1-distill-llama-70b",
+#     "google-gla:gemini-2.0-flash-lite",
+#     "groq:meta-llama/llama-4-maverick-17b-128e-instruct",
+#     "groq:llama3-70b-8192",
+# )
+#
+# FALLBACK_SEQUENCE_2 = FallbackModel(
+# "google-gla:gemini-2.0-flash",
+# "google-gla:gemini-2.0-flash-lite",
+#     "groq:deepseek-r1-distill-llama-70b",
+#     "groq:meta-llama/llama-4-maverick-17b-128e-instruct",
+#     "groq:llama3-70b-8192",
+#     "google-gla:gemini-2.5-flash-preview-05-20",
+# )
 # print("Using model:", GROQ_MODEL_Deepseek_r1)
 _default_groq_settings: ModelSettings = {
     "temperature": 0.8,
