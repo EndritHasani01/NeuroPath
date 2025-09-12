@@ -1,8 +1,9 @@
 # ========== FILE: tests/conftest.py ==========
+
 import asyncio
 import json
 import pytest
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
 from app.main import app
 from app.models import (
     AssessmentAnswer, InsightDetail, QuestionDetail, QuestionType
@@ -10,8 +11,13 @@ from app.models import (
 
 @pytest.fixture
 async def client():
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    #async with AsyncClient(app=app, base_url="http://test") as ac:
+    # HTTPX ≥ 0.28: pass the ASGI app via ASGITransport, not AsyncClient(app=...)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
+
+
 
 # --- Simple factories for valid model instances used across tests ---
 

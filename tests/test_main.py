@@ -12,7 +12,7 @@ from app.models import (
     QuestionType,
 )
 
-pytestmark = pytest.mark.anyio
+pytestmark = pytest.mark.asyncio
 
 
 # -------------------- /api/ai/generate-learning-path --------------------
@@ -133,11 +133,7 @@ async def test_generate_review_happy_path(client, mocker):
     assert set(body.keys()) == {"summary", "strengths", "weaknesses"}
 
 
-@pytest.mark.xfail(reason="Model currently allows empty dict; make performance_data non-empty via Field(min_length=1)")
 async def test_generate_review_validation_error_empty_performance_data(client):
-    # To make this pass, update:
-    # class ReviewGenerationRequest(...):
-    #     performance_data: Dict[str, Any] = Field(..., min_length=1)
     payload = {"userId": 9, "topicProgressId": 17, "performanceData": {}}
     res = await client.post("/api/ai/generate-review", json=payload)
     assert res.status_code == 422

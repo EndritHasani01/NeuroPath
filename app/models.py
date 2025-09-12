@@ -109,7 +109,7 @@ class NextInsightRequest(CamelModel): # Existing
 class ReviewGenerationRequest(CamelModel): # Existing
     user_id: Optional[int] = Field(None, description="Optional unique identifier of the user for whom the review is being generated.")
     topic_progress_id: Optional[int] = Field(None, description="Optional identifier for the user's current progress within a topic, providing context for the review.")
-    performance_data: Dict[str, Any] = Field(..., description="A dictionary containing structured performance data for the topic, which will be used to generate a personalized review.")
+    performance_data: Dict[str, Any] = Field(..., description="A dictionary containing structured performance data for the topic, which will be used to generate a personalized review.", min_length=1)
 
 # ---------- Response DTOs (Python to Java) ---------------------------------------
 class LearningPathResponse(CamelModel): # Existing
