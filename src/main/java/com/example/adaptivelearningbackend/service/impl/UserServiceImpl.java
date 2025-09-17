@@ -1,9 +1,6 @@
 package com.example.adaptivelearningbackend.service.impl;
 
-import com.example.adaptivelearningbackend.dto.JwtResponseDTO;
-import com.example.adaptivelearningbackend.dto.LoginRequestDTO;
-import com.example.adaptivelearningbackend.dto.RegisterRequestDTO;
-import com.example.adaptivelearningbackend.dto.UserDTO;
+import com.example.adaptivelearningbackend.dto.*;
 import com.example.adaptivelearningbackend.entity.RoleEntity;
 import com.example.adaptivelearningbackend.entity.UserEntity;
 import com.example.adaptivelearningbackend.exception.NotFoundException;
@@ -11,6 +8,7 @@ import com.example.adaptivelearningbackend.exception.UserAlreadyExistsException;
 import com.example.adaptivelearningbackend.repository.RoleRepository;
 import com.example.adaptivelearningbackend.repository.UserRepository;
 import com.example.adaptivelearningbackend.security.JwtTokenProvider;
+import com.example.adaptivelearningbackend.service.LearningService;
 import com.example.adaptivelearningbackend.service.UserService;
 import lombok.RequiredArgsConstructor;
 // import org.springframework.security.crypto.password.PasswordEncoder; // Uncomment when proper security is added
@@ -28,10 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,6 +36,7 @@ public class UserServiceImpl implements UserService {
     private static final String DEFAULT_ROLE = "ROLE_USER";
 
     private final UserRepository userRepository;
+    private final LearningService learningService;
      private final PasswordEncoder passwordEncoder;
     private final RoleRepository roleRepository;
 
@@ -85,6 +81,28 @@ public class UserServiceImpl implements UserService {
         UserEntity savedUser = userRepository.save(user);
         logger.info("Created user {} with id {}", savedUser.getUsername(), savedUser.getId());
         return mapToUserDTO(savedUser);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserProfileDTO getProfileForUser(Long userId) {
+        UserDTO user = getUserById(userId);
+        List<DomainStatusDTO> status = learningService.getDomainsWithStatus(userId);
+
+        long completedDomains = status.stream().filter(ds -> !ds.isInProgress()).count();
+        double overall = status.isEmpty() ? 0 : (completedDomains * 100.0 / status.size());
+        int startedDomains = (int) status.stream().filter(DomainStatusDTO::isInProgress).count();
+        int completedInsights = learningService.countCompletedInsights(userId);
+
+        return UserProfileDTO.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .overallProgress(overall)
+                .domains(status)
+                .startedDomains(startedDomains)
+                .completedInsights(completedInsights)
+                .build();
     }
 
     @Override
