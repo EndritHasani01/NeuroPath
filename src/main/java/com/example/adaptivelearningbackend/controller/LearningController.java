@@ -2,9 +2,11 @@ package com.example.adaptivelearningbackend.controller;
 
 import com.example.adaptivelearningbackend.dto.*;
 import com.example.adaptivelearningbackend.entity.UserEntity;
+import com.example.adaptivelearningbackend.exception.NotFoundException;
 import com.example.adaptivelearningbackend.repository.UserRepository;
 import com.example.adaptivelearningbackend.security.CustomUserDetails;
 import com.example.adaptivelearningbackend.service.LearningService;
+import com.example.adaptivelearningbackend.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -27,23 +29,25 @@ public class LearningController {
 
     private static final Logger logger = LoggerFactory.getLogger(LearningController.class);
     private final LearningService learningService;
-    private final UserRepository userRepository;
+    private final UserService userService;
 
     private Long getCurrentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) {
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is not authenticated");
         }
 
         Object principal = auth.getPrincipal();
         if (principal instanceof CustomUserDetails) {
             return ((CustomUserDetails) principal).getId();
-        } else {
-            // Fallback: load by username
-            String username = auth.getName();
-            UserEntity u = userRepository.findByUsername(username)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-            return u.getId();
+        }
+
+        String username = auth.getName();
+        try {
+            return userService.getUserByUsernameOrEmail(username).getId();
+        } catch (NotFoundException ex) {
+            logger.error("Authenticated user {} not found in persistence store", username, ex);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user no longer exists", ex);
         }
     }
 
