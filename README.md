@@ -53,12 +53,8 @@ Swagger documentation is available at `http://localhost:8080/swagger-ui.html` on
 ### Authentication
 
 * `POST /api/auth/login` – obtain a JWT token
-* `POST /api/auth/register` – simple registration (username == email)
-
-### User
-
-* `POST /api/users/register` – create a user
-* `GET  /api/users/me` – profile summary of the authenticated user
+* `POST /api/auth/register` – create a user
+* `GET  /api/auth/me` – profile summary of the authenticated user
 
 ### Learning Workflow
 
