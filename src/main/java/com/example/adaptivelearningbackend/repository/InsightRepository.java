@@ -15,7 +15,13 @@ public interface InsightRepository extends JpaRepository<InsightEntity, Long> {
     List<InsightEntity> findByTopicProgressIdAndLevel(Long topicProgressId, int level);
 
 
-    @Query("SELECT i FROM InsightEntity i WHERE i.topicProgress.id = :topicProgressId AND i.completed = false ORDER BY i.lastAccessedAt ASC, i.relevanceScore DESC")
+    @Query("""
+            SELECT i 
+            FROM InsightEntity i 
+            WHERE i.topicProgress.id = :topicProgressId 
+            AND i.completed = false 
+            ORDER BY i.lastAccessedAt ASC, i.relevanceScore DESC
+            """)
     List<InsightEntity> findUncompletedInsightsForTopic(@Param("topicProgressId") Long topicProgressId);
 
     long countByTopicProgressId(Long topicProgressId);

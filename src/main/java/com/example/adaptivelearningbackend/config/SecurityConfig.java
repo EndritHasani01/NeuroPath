@@ -2,6 +2,7 @@ package com.example.adaptivelearningbackend.config;
 
 import com.example.adaptivelearningbackend.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -15,6 +16,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.*;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -23,6 +25,9 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
+
+    @Value("${frontend.origin:*}")
+    private String frontendOriginProp;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -34,7 +39,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**",
                                 "/swagger-ui/**",
-                                "/v3/api-docs/**").permitAll()
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**",
+                                "/api-docs/**" ).permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -51,16 +58,15 @@ public class SecurityConfig {
     private CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
 
-        // Render-injected origin (may be null on first boot)
-        String prodOrigin = System.getenv("FRONTEND_ORIGIN");   // ← use ALL CAPS, more conventional
+        // Support comma-separated patterns via application property "frontend.origin"
+        List<String> patterns = Arrays.stream(
+                frontendOriginProp == null ? new String[]{"http://localhost:*"} : frontendOriginProp.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
 
-        // build the list safely
-        if (prodOrigin != null && !prodOrigin.isBlank()) {
-            cfg.setAllowedOriginPatterns(List.of(prodOrigin));
-        } else {
-            // allow nothing (or "*" during hard-dev) if var is absent
-            cfg.setAllowedOriginPatterns(List.of("http://localhost:*"));
-        }
+        cfg.setAllowedOriginPatterns(patterns.isEmpty() ? java.util.List.of("http://localhost:*") : patterns);
+
 
         cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
