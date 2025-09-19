@@ -5,3 +5,4 @@ metadata:
   namespace: neuropath
 data:
   PORT: "8000"
+  LLM_MODE: mock

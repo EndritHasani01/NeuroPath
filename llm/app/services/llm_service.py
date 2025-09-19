@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
@@ -15,6 +16,9 @@ from app.models import (
     ReviewResponse, InsightDetail, QuestionDetail, UserProficiencyProfile, ContentAdaptationPlan, TopicPerformanceData,
     ContentAdaptationFocus,
 )
+
+_LLM_MODE = os.getenv("LLM_MODE", "mock").strip().lower()
+_USE_REAL_LLM = _LLM_MODE in {"real", "live", "prod", "production", "true", "1"}
 
 # ---------------------------------------------------------------------------
 FALLBACK_SEQUENCE_1 = FallbackModel(
@@ -65,6 +69,96 @@ _default_groq_settings: ModelSettings = {
 
 
 # ---------- Structured prompt payloads -------------------------------------
+async def _maybe_sleep_for_mock():
+    if not _USE_REAL_LLM:
+        await asyncio.sleep(0)
+
+
+def _build_mock_learning_path(domain_name: str) -> LearningPathResponse:
+    base_topics = [
+        "Foundations",
+        "Key Concepts",
+        "Core Techniques",
+        "Guided Practice",
+        "Common Pitfalls",
+        "Real-World Application",
+        "Deep Dive",
+        "Project Workshop",
+        "Reflection and Review",
+        "Next Steps"
+    ]
+    topics: List[str] = []
+    for idx in range(10):
+        label = base_topics[idx] if idx < len(base_topics) else f"Advanced Focus {idx + 1}"
+        topics.append(f"{domain_name} - {label}")
+    return LearningPathResponse(domain_name=domain_name, topics=topics)
+
+
+def _mock_questions(topic_name: str) -> List[QuestionDetail]:
+    options = [
+        "It introduces the core idea",
+        "It is unrelated background information",
+        "It lists tools only",
+        "It summarises the entire course"
+    ]
+    feedbacks = {
+        options[0]: "Correct – the explanation focuses on the central idea of the insight.",
+        options[1]: "This point actually supports the main concept.",
+        options[2]: "Tools appear later; this section sets up the idea.",
+        options[3]: "The insight narrows in on one concept rather than the entire course."
+    }
+    mc_question = QuestionDetail(
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        question_text=f"Which statement best captures the key lesson from '{topic_name}'?",
+        options=options,
+        correct_answer=options[0],
+        answer_feedbacks=feedbacks,
+    )
+    tf_question = QuestionDetail(
+        question_type=QuestionType.TRUE_FALSE,
+        question_text=f"True or False: Practising the ideas from '{topic_name}' with short sessions helps build confidence.",
+        options=["True", "False"],
+        correct_answer="True",
+        answer_feedbacks={
+            "True": "Short, deliberate practice reinforces new ideas effectively.",
+            "False": "Small practice blocks are recommended to consolidate learning."
+        },
+    )
+    return [mc_question, tf_question]
+
+
+def _mock_insights(domain_name: str, topic_name: str, level: int) -> List[InsightDetail]:
+    paragraphs = [
+        f"Focus on the core vocabulary and sounds that define {topic_name}. Begin by repeating short phrases so the mechanics feel natural before adding complexity.",
+        f"Link the concept to something you already understand. Making analogies keeps your working memory free while forming strong associations.",
+        f"Wrap up by explaining the topic aloud in your own words. Teaching the idea – even to yourself – highlights gaps and builds confidence for the next level."
+    ]
+    insights: List[InsightDetail] = []
+    for idx, paragraph in enumerate(paragraphs, start=1):
+        full_explanation = (
+            f"Level {level} insight {idx} for {topic_name} emphasises deliberate practice. "
+            f"{paragraph} This short reflection should take about a minute to read and sets you up for the next activity."
+        )
+        insights.append(
+            InsightDetail(
+                title=f"{topic_name}: Step {idx}",
+                explanation=full_explanation,
+                ai_metadata={"mode": "mock", "level": level, "domain": domain_name},
+                questions=_mock_questions(topic_name),
+            )
+        )
+    return insights
+
+
+def _mock_review(topic_name: str, level: int) -> ReviewResponse:
+    summary = (
+        f"You reviewed {topic_name} at level {level} by revisiting the core idea, applying it in a short exercise, and summarising the learning in your own words. "
+        "This rhythm keeps the topic approachable while your long-term memory consolidates new patterns."
+    )
+    strengths = [f"Consistent engagement with {topic_name}", "Willingness to reflect after every session"]
+    weaknesses = ["Pause for quick self-tests before moving on", "Write down one actionable takeaway per study block"]
+    return ReviewResponse(summary=summary, strengths=strengths, weaknesses=weaknesses)
+
 class LearningPathPrompt(BaseModel):
     domain_name: str = Field(..., description="The name of the learning domain for which the LLM should generate a learning path.")
     assessment_answers: List[AssessmentAnswer] = Field(default_factory=list, description="A list of user's answers from an initial assessment, used by the LLM to potentially tailor the learning path.")
@@ -190,6 +284,10 @@ async def generate_learning_path_logic(
         user_id: Optional[int] = None,
         user_topic_performance_data: Optional[TopicPerformanceData] = None,
 ) -> LearningPathResponse:
+    if not _USE_REAL_LLM:
+        await _maybe_sleep_for_mock()
+        return _build_mock_learning_path(domain_name)
+
     proficiency_profile_dict = None
     if user_topic_performance_data and user_topic_performance_data.assessment_answers:
         try:
@@ -222,6 +320,8 @@ async def add_questions(one_insight: InsightDetail) -> InsightDetail:  # Unchang
         "title": one_insight.title,
         "explanation": one_insight.explanation,
     }
+    if not _USE_REAL_LLM:
+        return one_insight  # mock mode
     try:
         resp = await _question_agent.run(json.dumps(q_payload))
         if resp.output:  # Check if output is not None
@@ -239,6 +339,10 @@ async def generate_insights_logic(
         user_id: Optional[int],
         user_topic_performance_data: Optional[TopicPerformanceData] = None,
 ) -> List[InsightDetail]:
+    if not _USE_REAL_LLM:
+        await _maybe_sleep_for_mock()
+        return _mock_insights(domain_name, topic_name, level)
+
     adaptation_plan_dict = None
     proficiency_profile = None
 
@@ -318,6 +422,10 @@ async def generate_review_logic(
         level: int,
         performance_data: Dict[str, Any],  # Java will construct this from its TopicPerformanceDataDTO
 ) -> ReviewResponse:
+
+    if not _USE_REAL_LLM:
+        await _maybe_sleep_for_mock()
+        return _mock_review(topic_name, level)
 
     payload = {
         "topic_name": topic_name,
