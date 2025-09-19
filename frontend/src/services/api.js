@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '/api';
+const baseURL = rawBaseUrl.endsWith('/') && rawBaseUrl !== '/' ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
+
 const apiClient = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL,
+    baseURL,
     headers: {
         'Content-Type': 'application/json',
     },
@@ -24,6 +27,7 @@ apiClient.interceptors.response.use(
 
 
 
+
 // Learning Service Calls
 export const getDomains = () => apiClient.get('/learning/domains');
 export const getDomainsWithStatus = () => apiClient.get('/learning/domains/status');
@@ -39,7 +43,7 @@ export const getDomainOverview = (domainId) =>
     apiClient.get(`/learning/domains/${domainId}/overview`);
 export const selectTopic = (domainId, topicIdx) =>
     apiClient.post(`/learning/domains/${domainId}/select-topic/${topicIdx}`);
-export const getProfile = () => apiClient.get('/users/me');
+export const getProfile = () => apiClient.get('/auth/me');
 
 
 export default apiClient;

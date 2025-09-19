@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llm-config
+  namespace: neuropath
+data:
+  PORT: "8000"

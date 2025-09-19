@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: adaptive-learning-llm
+  namespace: neuropath
+spec:
+  type: ClusterIP
+  selector:
+    app: adaptive-learning-llm
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

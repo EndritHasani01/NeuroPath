@@ -7,13 +7,14 @@ import {
     Typography,
     Link,
 } from "@mui/material";
-import {loginUser, registerUser} from "../services/auth";
+import { loginUser, registerUser } from "../services/auth";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 export default function RegisterPage() {
     const [form, setForm] = useState({
         username: "",
+        email: "",
         password: "",
         confirmPassword: "",
     });
@@ -31,8 +32,18 @@ export default function RegisterPage() {
             return;
         }
         try {
-            await registerUser(form);
-            const { data } = await loginUser(form);
+            const registerPayload = {
+                username: form.username,
+                email: form.email,
+                password: form.password,
+                confirmPassword: form.confirmPassword,
+            };
+
+            await registerUser(registerPayload);
+            const { data } = await loginUser({
+                username: form.username,
+                password: form.password,
+            });
             login(data.token);
             navigate("/");
         } catch (err) {
@@ -49,10 +60,20 @@ export default function RegisterPage() {
 
                 <TextField
                     margin="dense"
-                    label="E-mail or username"
+                    label="Username"
                     name="username"
                     fullWidth
                     value={form.username}
+                    onChange={handleChange}
+                    required
+                />
+                <TextField
+                    margin="dense"
+                    label="Email"
+                    type="email"
+                    name="email"
+                    fullWidth
+                    value={form.email}
                     onChange={handleChange}
                     required
                 />

@@ -1,0 +1,88 @@
+name: service-ci-cd
+
+on:
+  push:
+    branches:
+      - "**"
+
+jobs:
+  build-and-push:
+    name: Build and push ${{ matrix.id }} image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: backend
+            context: backend
+            dockerfile: backend/Dockerfile
+            image: adaptive-learning-backend
+          - id: frontend
+            context: frontend
+            dockerfile: frontend/Dockerfile
+            image: adaptive-learning-frontend
+          - id: llm
+            context: llm
+            dockerfile: llm/Dockerfile
+            image: adaptive-learning-llm
+    env:
+      REGISTRY: docker.io
+      IMAGE_NAMESPACE: ${{ secrets.DOCKERHUB_USERNAME }}
+      EXTRA_TAG:
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Temurin JDK 21
+        if: matrix.id == 'backend'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Build and test backend with Maven
+        if: matrix.id == 'backend'
+        working-directory: backend
+        run: ./mvnw -B verify
+
+      - name: Resolve backend project version
+        if: matrix.id == 'backend'
+        id: project
+        working-directory: backend
+        run: |
+          VERSION=$(./mvnw -q -DforceStdout help:evaluate -Dexpression=project.version)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Export backend version tag
+        if: matrix.id == 'backend'
+        run: echo "EXTRA_TAG=type=raw,value=${{ steps.project.outputs.version }}" >> "$GITHUB_ENV"
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}
+          tags: |
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+            ${{ env.EXTRA_TAG }}
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

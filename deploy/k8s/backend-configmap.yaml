@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: neuropath
+data:
+  SPRING_PROFILES_ACTIVE: prod
+  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres.neuropath.svc.cluster.local:5432/adaptive_learning_db
+  SPRING_DATASOURCE_USERNAME: postgres
+  PYTHON_SERVICE_BASEURL: http://adaptive-learning-llm.neuropath.svc.cluster.local:8000/api/ai
+  FRONTEND_ORIGIN: http://neuropath.localtest.me
+  JWT_EXPIRATION_MS: "8640000000"
+
+

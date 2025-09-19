@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adaptive-learning-llm
+  namespace: neuropath
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: adaptive-learning-llm
+  template:
+    metadata:
+      labels:
+        app: adaptive-learning-llm
+    spec:
+      containers:
+        - name: adaptive-learning-llm
+          image: neuropath-llm:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: llm-config
+                  key: PORT
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: llm-secret
+                  key: GEMINI_API_KEY
+            - name: GROQ_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: llm-secret
+                  key: GROQ_API_KEY
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
